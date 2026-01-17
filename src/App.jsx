@@ -6,7 +6,7 @@ import AddTaskModal from './components/AddTaskModal'
 import ProjectSwitcher from './components/ProjectSwitcher'
 
 function App() {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 6, 1)) // July 2024
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDateForTask, setSelectedDateForTask] = useState(null)
 

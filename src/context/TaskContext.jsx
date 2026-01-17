@@ -7,118 +7,13 @@ const TaskContext = createContext(null)
 // Default project
 const DEFAULT_PROJECT = {
   id: 'proj-default',
-  name: 'Marketing Campaign',
-  color: '#e07a5f'
+  name: 'My Project',
+  color: '#5a7d9a'
 }
 
-// Sample tasks for the default project
+// Empty initial tasks
 const INITIAL_TASKS = {
-  'proj-default': [
-    {
-      id: 'task-1',
-      name: 'Creative Cut - Refreshed',
-      assignee: 'Sarah Chen',
-      startDate: '2024-07-02',
-      endDate: '2024-07-04',
-      color: '#e07a5f',
-    },
-    {
-      id: 'task-2',
-      name: 'Creative Cut - Refreshed',
-      assignee: 'Marcus Webb',
-      startDate: '2024-07-05',
-      endDate: '2024-07-05',
-      color: '#e07a5f',
-    },
-    {
-      id: 'task-3',
-      name: 'Creative Cut - Refreshed',
-      assignee: 'Sarah Chen',
-      startDate: '2024-07-08',
-      endDate: '2024-07-09',
-      color: '#f4d19b',
-    },
-    {
-      id: 'task-4',
-      name: 'Live Creative Review/Edit Session Refreshed',
-      assignee: 'Team',
-      startDate: '2024-07-09',
-      endDate: '2024-07-10',
-      color: '#81a684',
-    },
-    {
-      id: 'task-5',
-      name: 'Internal Cut - Refreshed',
-      assignee: 'Elena Rodriguez',
-      startDate: '2024-07-10',
-      endDate: '2024-07-13',
-      color: '#f4d19b',
-    },
-    {
-      id: 'task-6',
-      name: 'Creative Cut - Eye Candy',
-      assignee: 'Team',
-      startDate: '2024-07-15',
-      endDate: '2024-07-20',
-      color: '#d4a574',
-    },
-    {
-      id: 'task-7',
-      name: 'Internal Review Refreshed',
-      assignee: 'Marcus Webb',
-      startDate: '2024-07-15',
-      endDate: '2024-07-16',
-      color: '#7d9bb8',
-    },
-    {
-      id: 'task-8',
-      name: 'Synthesize Notes Refreshed',
-      assignee: 'Sarah Chen',
-      startDate: '2024-07-16',
-      endDate: '2024-07-17',
-      color: '#c9b8d4',
-    },
-    {
-      id: 'task-9',
-      name: 'Rough Cut - Refreshed',
-      assignee: 'Elena Rodriguez',
-      startDate: '2024-07-17',
-      endDate: '2024-07-21',
-      color: '#f4d19b',
-    },
-    {
-      id: 'task-10',
-      name: 'Live Rough Review Refreshed',
-      assignee: 'Team',
-      startDate: '2024-07-22',
-      endDate: '2024-07-24',
-      color: '#81a684',
-    },
-    {
-      id: 'task-11',
-      name: 'Rough Cut Synthesize Notes Refreshed',
-      assignee: 'Sarah Chen',
-      startDate: '2024-07-24',
-      endDate: '2024-07-25',
-      color: '#f4d19b',
-    },
-    {
-      id: 'task-12',
-      name: 'Fine Cut - Refreshed',
-      assignee: 'Marcus Webb',
-      startDate: '2024-07-26',
-      endDate: '2024-07-27',
-      color: '#e07a5f',
-    },
-    {
-      id: 'task-13',
-      name: 'Record & Select VO Refreshed',
-      assignee: 'Elena Rodriguez',
-      startDate: '2024-07-26',
-      endDate: '2024-07-27',
-      color: '#f7e96c',
-    },
-  ]
+  'proj-default': []
 }
 
 const INITIAL_PROJECTS = [DEFAULT_PROJECT]
