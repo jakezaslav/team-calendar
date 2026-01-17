@@ -1,0 +1,216 @@
+.task-sidebar {
+  width: 340px;
+  min-width: 340px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(45, 42, 38, 0.04);
+}
+
+/* Header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sidebar-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.task-count {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  background: var(--color-bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* Content */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+
+/* Empty State */
+.sidebar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.sidebar-empty p {
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+  line-height: 1.5;
+}
+
+/* Task List */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Task Item */
+.task-item {
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 2px solid transparent;
+}
+
+.task-item:hover {
+  background: var(--color-bg-warm);
+}
+
+.task-item.selected {
+  border-color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Task Header */
+.task-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.task-color-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-item-name {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.task-item:hover .task-delete-btn {
+  opacity: 1;
+}
+
+.task-delete-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Assignee */
+.task-item-assignee {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--color-text-light);
+  margin-bottom: var(--space-sm);
+}
+
+/* Dates Row */
+.task-item-dates {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.date-field,
+.duration-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-field {
+  flex: 1;
+}
+
+.duration-field {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.date-field label,
+.duration-field label {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-light);
+}
+
+.date-field input,
+.duration-field input {
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  width: 100%;
+  transition: border-color var(--transition-fast);
+}
+
+.date-field input:focus,
+.duration-field input:focus {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.duration-field input {
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.duration-field input::-webkit-outer-spin-button,
+.duration-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Scrollbar */
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-light);
+}

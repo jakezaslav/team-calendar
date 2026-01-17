@@ -1,0 +1,84 @@
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.calendar-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.calendar-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.nav-btn:hover {
+  background-color: var(--color-bg-warm);
+  color: var(--color-text);
+}
+
+.nav-btn:active {
+  transform: scale(0.95);
+}
+
+.today-btn {
+  width: auto;
+  padding: 0 var(--space-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.calendar-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.add-task-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.add-task-btn:hover {
+  background: var(--color-text-muted);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.add-task-btn:active {
+  transform: translateY(0);
+}
+

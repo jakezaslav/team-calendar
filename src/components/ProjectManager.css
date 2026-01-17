@@ -1,0 +1,234 @@
+.project-manager-modal {
+  max-width: 500px;
+}
+
+.project-manager-content {
+  padding: var(--space-lg);
+}
+
+/* Project List */
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.project-item.active {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.project-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.project-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.project-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.current-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--task-sage);
+  background: rgba(129, 166, 132, 0.15);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.project-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background: var(--color-bg-warm);
+  color: var(--color-text);
+}
+
+.icon-btn.delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Edit Form */
+.project-edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.project-edit-form input {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.project-edit-form input:focus {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.color-options {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.color-option {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.selected {
+  border-color: var(--color-text);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.btn-sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+}
+
+/* New Project Form */
+.new-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+}
+
+.new-project-form input {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--color-surface);
+}
+
+.new-project-form input:focus {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+/* Add Project Button */
+.add-project-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.add-project-btn:hover {
+  border-color: var(--color-text-light);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* Reuse modal styles */
+.project-manager-modal .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.project-manager-modal .btn-secondary {
+  background: var(--color-bg-warm);
+  color: var(--color-text);
+}
+
+.project-manager-modal .btn-secondary:hover {
+  background: var(--color-border);
+}
+
+.project-manager-modal .btn-primary {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.project-manager-modal .btn-primary:hover {
+  background: var(--color-text-muted);
+}
+
+.project-manager-modal .btn-primary:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+

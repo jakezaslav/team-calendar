@@ -1,0 +1,118 @@
+.calendar-grid {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+}
+
+/* Weekday Headers */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--color-bg-warm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.weekday-header {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* Calendar Weeks Container */
+.calendar-weeks {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual Week */
+.calendar-week {
+  position: relative;
+  min-height: 120px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.calendar-week:last-child {
+  border-bottom: none;
+}
+
+/* Day Cells Row */
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.day-cell {
+  padding: var(--space-sm);
+  border-right: 1px solid var(--color-border-light);
+  min-height: 120px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.day-cell:hover {
+  background-color: rgba(224, 122, 95, 0.05);
+}
+
+.day-cell:last-child {
+  border-right: none;
+}
+
+.day-cell.other-month {
+  background: var(--color-bg);
+}
+
+.day-cell.other-month .day-number {
+  color: var(--color-text-light);
+}
+
+.day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  border-radius: 50%;
+}
+
+.today-number {
+  background: var(--color-text);
+  color: var(--color-surface) !important;
+}
+
+/* Task Rows Container */
+.week-tasks {
+  position: relative;
+  padding-top: 36px;
+  padding-bottom: var(--space-xs);
+  min-height: 84px;
+  pointer-events: none;
+}
+
+.task-row {
+  position: relative;
+  height: 26px;
+  margin-bottom: 2px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  pointer-events: none;
+}
+
+/* Make task bars clickable */
+.task-row > * {
+  pointer-events: auto;
+}
+
