@@ -232,3 +232,36 @@
   pointer-events: none;
 }
 
+/* Danger Zone */
+.danger-zone {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.clear-data-btn {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  border: 1px solid #c9302c;
+  color: #c9302c;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  transition: all var(--transition-fast);
+}
+
+.clear-data-btn:hover {
+  background: #c9302c;
+  color: white;
+}
+
+.clear-data-btn svg {
+  stroke: currentColor;
+}
+

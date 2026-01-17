@@ -38,11 +38,11 @@ function ProjectManager({ onClose }) {
   }
 
   const handleDelete = (projectId) => {
-    if (projects.length <= 1) {
-      alert('You must have at least one project.')
-      return
-    }
-    if (window.confirm('Are you sure? All tasks in this project will be deleted.')) {
+    const message = projects.length <= 1 
+      ? 'Delete this project and start fresh with a new default project?'
+      : 'Are you sure? All tasks in this project will be deleted.'
+    
+    if (window.confirm(message)) {
       deleteProject(projectId)
     }
   }
@@ -133,7 +133,6 @@ function ProjectManager({ onClose }) {
                         className="icon-btn delete"
                         onClick={() => handleDelete(project.id)}
                         title="Delete"
-                        disabled={projects.length <= 1}
                       >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                           <path d="M3 4H13M6 4V3C6 2.44772 6.44772 2 7 2H9C9.55228 2 10 2.44772 10 3V4M12 4V13C12 13.5523 11.5523 14 11 14H5C4.44772 14 4 13.5523 4 13V4H12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -197,6 +196,24 @@ function ProjectManager({ onClose }) {
               New Project
             </button>
           )}
+
+          {/* Danger Zone */}
+          <div className="danger-zone">
+            <button 
+              className="clear-data-btn"
+              onClick={() => {
+                if (window.confirm('Delete ALL projects and tasks? This cannot be undone.')) {
+                  localStorage.clear()
+                  window.location.reload()
+                }
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 4H13M6 4V3C6 2.44772 6.44772 2 7 2H9C9.55228 2 10 2.44772 10 3V4M12 4V13C12 13.5523 11.5523 14 11 14H5C4.44772 14 4 13.5523 4 13V4H12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Clear All Data
+            </button>
+          </div>
         </div>
       </div>
     </div>

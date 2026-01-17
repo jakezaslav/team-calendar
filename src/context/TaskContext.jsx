@@ -56,8 +56,19 @@ export function TaskProvider({ children }) {
   }, [setProjects])
 
   const deleteProject = useCallback((projectId) => {
-    // Don't delete if it's the only project
-    if (projects.length <= 1) return false
+    // If deleting the last project, create a fresh default first
+    if (projects.length <= 1) {
+      const freshDefault = {
+        id: 'proj-' + Date.now(),
+        name: 'My Project',
+        color: '#5a7d9a'
+      }
+      setProjects([freshDefault])
+      setTasksByProject({ [freshDefault.id]: [] })
+      setActiveProjectId(freshDefault.id)
+      setSelectedTaskId(null)
+      return true
+    }
     
     setProjects(prev => prev.filter(project => project.id !== projectId))
     setTasksByProject(prev => {
@@ -75,7 +86,7 @@ export function TaskProvider({ children }) {
     }
     
     return true
-  }, [projects, activeProjectId, setProjects, setTasksByProject, setActiveProjectId])
+  }, [projects, activeProjectId, setProjects, setTasksByProject, setActiveProjectId, setSelectedTaskId])
 
   const switchProject = useCallback((projectId) => {
     setActiveProjectId(projectId)
