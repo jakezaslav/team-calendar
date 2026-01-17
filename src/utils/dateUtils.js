@@ -5,7 +5,7 @@ import {
   endOfWeek,
   eachDayOfInterval,
   format,
-  parseISO,
+  parseISO as dfParseISO,
   differenceInDays,
   addDays,
   isSameDay,
@@ -15,9 +15,19 @@ import {
   subMonths,
 } from 'date-fns'
 
+/**
+ * Parse ISO date string as LOCAL time (not UTC)
+ * This fixes timezone issues where "2026-01-02" was being interpreted as UTC midnight
+ * which becomes the previous day in US timezones
+ */
+export function parseISO(dateString) {
+  // Parse YYYY-MM-DD as local time by using Date constructor with parts
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export {
   format,
-  parseISO,
   differenceInDays,
   addDays,
   isSameDay,
