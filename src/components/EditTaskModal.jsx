@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTasks } from '../context/TaskContext'
-import { format, formatDateForInput } from '../utils/dateUtils'
+import { formatDateForInput } from '../utils/dateUtils'
 import './AddTaskModal.css'
 
 const PRESET_COLORS = [
@@ -26,21 +26,31 @@ const PRESET_COLORS_LIGHT = [
   { name: 'Light Rose', value: '#e8d0d0' },
 ]
 
-function AddTaskModal({ onClose, currentDate, initialDate }) {
-  const { addTask } = useTasks()
-  
-  // Use initialDate if provided (from clicking a date), otherwise use current month view
-  const defaultDate = formatDateForInput(initialDate || currentDate)
+function EditTaskModal({ task, onClose }) {
+  const { updateTask, deleteTask } = useTasks()
   
   const [form, setForm] = useState({
-    name: '',
-    assignee: '',
-    startDate: defaultDate,
-    endDate: defaultDate,
-    color: PRESET_COLORS[0].value
+    name: task.name || '',
+    assignee: task.assignee || '',
+    startDate: task.startDate || '',
+    endDate: task.endDate || '',
+    color: task.color || PRESET_COLORS[0].value
   })
   
   const [errors, setErrors] = useState({})
+
+  // Update form when task changes
+  useEffect(() => {
+    if (task) {
+      setForm({
+        name: task.name || '',
+        assignee: task.assignee || '',
+        startDate: task.startDate || '',
+        endDate: task.endDate || '',
+        color: task.color || PRESET_COLORS[0].value
+      })
+    }
+  }, [task])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -84,7 +94,7 @@ function AddTaskModal({ onClose, currentDate, initialDate }) {
     
     if (!validate()) return
     
-    addTask({
+    updateTask(task.id, {
       name: form.name.trim(),
       assignee: form.assignee.trim() || 'Unassigned',
       startDate: form.startDate,
@@ -95,11 +105,18 @@ function AddTaskModal({ onClose, currentDate, initialDate }) {
     onClose()
   }
 
+  const handleDelete = () => {
+    if (window.confirm(`Delete "${task.name}"?`)) {
+      deleteTask(task.id)
+      onClose()
+    }
+  }
+
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
-      // Save task when clicking outside (if valid)
+      // Save changes when clicking outside (if valid)
       if (validate()) {
-        addTask({
+        updateTask(task.id, {
           name: form.name.trim(),
           assignee: form.assignee.trim() || 'Unassigned',
           startDate: form.startDate,
@@ -111,11 +128,13 @@ function AddTaskModal({ onClose, currentDate, initialDate }) {
     }
   }
 
+  if (!task) return null
+
   return (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
       <div className="modal" role="dialog" aria-labelledby="modal-title">
         <div className="modal-header">
-          <h2 id="modal-title">Add New Task</h2>
+          <h2 id="modal-title">Edit Task</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -230,13 +249,18 @@ function AddTaskModal({ onClose, currentDate, initialDate }) {
             </div>
           </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
+          <div className="modal-actions modal-actions-edit">
+            <button type="button" className="btn btn-danger" onClick={handleDelete}>
+              Delete
             </button>
-            <button type="submit" className="btn btn-primary">
-              Add Task
-            </button>
+            <div className="modal-actions-right">
+              <button type="button" className="btn btn-secondary" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Save Changes
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -244,5 +268,4 @@ function AddTaskModal({ onClose, currentDate, initialDate }) {
   )
 }
 
-export default AddTaskModal
-
+export default EditTaskModal

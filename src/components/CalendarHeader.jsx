@@ -1,9 +1,10 @@
 import { format, addMonths, subMonths } from '../utils/dateUtils'
 import ExportButton from './ExportButton'
 import SyncToSheets from './SyncToSheets'
+import AssigneeFilter from './AssigneeFilter'
 import './CalendarHeader.css'
 
-function CalendarHeader({ currentDate, onDateChange, onAddTask }) {
+function CalendarHeader({ currentDate, onDateChange, onAddTask, onUndo, canUndo }) {
   const handlePrevMonth = () => {
     onDateChange(subMonths(currentDate, 1))
   }
@@ -51,6 +52,19 @@ function CalendarHeader({ currentDate, onDateChange, onAddTask }) {
       </div>
       
       <div className="calendar-header-right">
+        <AssigneeFilter />
+        <button 
+          className="undo-btn" 
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Undo (Cmd+Z)"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3.75 6.75H11.25C13.3211 6.75 15 8.42893 15 10.5C15 12.5711 13.3211 14.25 11.25 14.25H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6.75 3.75L3.75 6.75L6.75 9.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Undo
+        </button>
         <SyncToSheets currentDate={currentDate} />
         <ExportButton currentDate={currentDate} />
         <button className="add-task-btn" onClick={onAddTask}>

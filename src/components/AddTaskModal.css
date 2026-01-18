@@ -135,6 +135,12 @@
 }
 
 /* Color Swatches */
+.color-swatches-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 .color-swatches {
   display: flex;
   flex-wrap: wrap;
@@ -260,5 +266,33 @@
 
 .btn-primary:hover {
   background: var(--color-text-muted);
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Edit modal actions layout */
+.modal-actions-edit {
+  justify-content: space-between;
+}
+
+.modal-actions-edit .btn-danger {
+  flex: 0 0 auto;
+}
+
+.modal-actions-right {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.modal-actions-right .btn {
+  flex: 0 0 auto;
+  padding: var(--space-sm) var(--space-lg);
 }
 

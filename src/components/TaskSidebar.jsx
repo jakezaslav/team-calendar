@@ -1,16 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTasks } from '../context/TaskContext'
 import { formatDate, getTaskDuration, formatDateForInput, parseISO, addDays, format, differenceInDays } from '../utils/dateUtils'
 import './TaskSidebar.css'
 
-function TaskSidebar() {
-  const { tasks, selectedTaskId, selectTask, updateTask, deleteTask } = useTasks()
+function TaskSidebar({ onEditTask }) {
+  const { tasks, allTasks, selectedTaskId, selectTask, updateTask, deleteTask, assigneeFilter, setAssigneeFilter } = useTasks()
   
   // State for editable duration input (allows backspacing)
   const [editingDuration, setEditingDuration] = useState({ taskId: null, value: '', fallback: 1 })
   
   // State for locked tasks (when locked, start date change shifts end date proportionally)
   const [lockedTasks, setLockedTasks] = useState(new Set())
+  
+  // Refs for scrolling to selected task
+  const taskRefs = useRef({})
+  const contentRef = useRef(null)
+  
+  // Scroll to selected task when it changes
+  useEffect(() => {
+    if (selectedTaskId && taskRefs.current[selectedTaskId]) {
+      taskRefs.current[selectedTaskId].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      })
+    }
+  }, [selectedTaskId])
 
   // Sort tasks by start date
   const sortedTasks = [...tasks].sort((a, b) => 
@@ -116,11 +130,26 @@ function TaskSidebar() {
   return (
     <aside className="task-sidebar">
       <div className="sidebar-header">
-        <h2>All Tasks</h2>
-        <span className="task-count">{tasks.length} tasks</span>
+        <h2>{assigneeFilter ? `${assigneeFilter}'s Tasks` : 'All Tasks'}</h2>
+        <div className="sidebar-header-right">
+          {assigneeFilter && (
+            <button 
+              className="clear-filter-btn"
+              onClick={() => setAssigneeFilter(null)}
+              title="Clear filter"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
+          <span className="task-count">
+            {assigneeFilter ? `${tasks.length}/${allTasks.length}` : `${tasks.length}`} tasks
+          </span>
+        </div>
       </div>
 
-      <div className="sidebar-content">
+      <div className="sidebar-content" ref={contentRef}>
         {sortedTasks.length === 0 ? (
           <div className="sidebar-empty">
             <p>No tasks yet. Click a date on the calendar to add one.</p>
@@ -134,8 +163,10 @@ function TaskSidebar() {
               return (
                 <div 
                   key={task.id}
+                  ref={el => taskRefs.current[task.id] = el}
                   className={`task-item ${isSelected ? 'selected' : ''}`}
                   onClick={() => selectTask(task.id)}
+                  onDoubleClick={() => onEditTask?.(task)}
                 >
                   {/* Task header with color and name */}
                   <div className="task-item-header">

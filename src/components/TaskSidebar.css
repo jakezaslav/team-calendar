@@ -1,11 +1,13 @@
 .task-sidebar {
   width: 340px;
   min-width: 340px;
+  height: 100vh;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 24px rgba(45, 42, 38, 0.04);
+  overflow: hidden;
 }
 
 /* Header */
@@ -23,12 +25,34 @@
   color: var(--color-text);
 }
 
+.sidebar-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 .task-count {
   font-size: 0.75rem;
   color: var(--color-text-light);
   background: var(--color-bg);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
+}
+
+.clear-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  transition: all var(--transition-fast);
+}
+
+.clear-filter-btn:hover {
+  background: var(--color-bg-warm);
+  color: var(--color-text);
 }
 
 /* Content */

@@ -1,6 +1,6 @@
 // Google Apps Script code as a string for easy copying
 export const GOOGLE_APPS_SCRIPT = `/**
- * GOOGLE APPS SCRIPT - Team Calendar Sync
+ * GOOGLE APPS SCRIPT - Plan It! Sync
  * 
  * SETUP INSTRUCTIONS:
  * 1. Create a new Google Sheet
@@ -18,17 +18,27 @@ export const GOOGLE_APPS_SCRIPT = `/**
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    const { tasks, month, year, projectName } = data;
+    const { tasks, projectName } = data;
     
-    console.log('Received sync request:', projectName, month, year);
+    console.log('Received sync request:', projectName);
     console.log('Tasks count:', tasks ? tasks.length : 0);
     
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     sheet.clear();
     
-    // Build the sheet
-    buildCalendarWithTasks(sheet, tasks, month, year, projectName);
+    // Find all months that have tasks
+    const monthsWithTasks = getMonthsWithTasks(tasks);
+    
+    // Build all calendars sequentially
+    let currentRow = 1;
+    for (const monthInfo of monthsWithTasks) {
+      currentRow = buildCalendarWithTasks(sheet, tasks, monthInfo.month, monthInfo.year, projectName, currentRow);
+      currentRow += 2; // Add spacing between months
+    }
+    
+    // Build task list and assignee due dates to the right
     buildTaskList(sheet, tasks);
+    buildAssigneeDueDates(sheet, tasks);
     
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, tasksProcessed: tasks.length }))
@@ -49,21 +59,55 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
+// Get all unique months that have tasks, sorted chronologically
+function getMonthsWithTasks(tasks) {
+  const monthSet = new Set();
+  
+  for (const task of tasks) {
+    // Add months for start date
+    const startDate = new Date(task.startDate + 'T00:00:00');
+    monthSet.add(startDate.getFullYear() + '-' + String(startDate.getMonth()).padStart(2, '0'));
+    
+    // Add months for end date (in case task spans multiple months)
+    const endDate = new Date(task.endDate + 'T00:00:00');
+    monthSet.add(endDate.getFullYear() + '-' + String(endDate.getMonth()).padStart(2, '0'));
+    
+    // Add any months in between
+    let current = new Date(startDate);
+    while (current <= endDate) {
+      monthSet.add(current.getFullYear() + '-' + String(current.getMonth()).padStart(2, '0'));
+      current.setMonth(current.getMonth() + 1);
+    }
+  }
+  
+  // Convert to array and sort
+  const months = Array.from(monthSet).sort().map(key => {
+    const [year, month] = key.split('-');
+    return { year: parseInt(year), month: parseInt(month) };
+  });
+  
+  return months;
+}
+
 // Build calendar with proper multi-task support
-function buildCalendarWithTasks(sheet, tasks, month, year, projectName) {
+// Returns the last row used
+function buildCalendarWithTasks(sheet, tasks, month, year, projectName, startRow) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
+  // Filter tasks for this month
+  const monthTasks = getTasksForMonth(tasks, month, year);
+  
   // Title
-  sheet.getRange('A1:G1').merge();
-  sheet.getRange('A1').setValue(projectName + ' - ' + monthNames[month] + ' ' + year);
-  sheet.getRange('A1').setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
-  sheet.getRange('A1').setBackground('#faf8f5');
+  sheet.getRange(startRow, 1, 1, 7).merge();
+  sheet.getRange(startRow, 1).setValue(projectName + ' - ' + monthNames[month] + ' ' + year);
+  sheet.getRange(startRow, 1).setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
+  sheet.getRange(startRow, 1).setBackground('#faf8f5');
   
   // Day headers
   for (let i = 0; i < 7; i++) {
-    const cell = sheet.getRange(2, i + 1);
+    const cell = sheet.getRange(startRow + 1, i + 1);
     cell.setValue(dayNames[i]);
     cell.setFontWeight('bold');
     cell.setHorizontalAlignment('center');
@@ -96,7 +140,7 @@ function buildCalendarWithTasks(sheet, tasks, month, year, projectName) {
   const tasksByWeek = weeks.map(week => {
     const weekStart = week.dates[0].dateStr;
     const weekEnd = week.dates[week.dates.length - 1].dateStr;
-    return getTasksForWeek(tasks, weekStart, weekEnd);
+    return getTasksForWeek(monthTasks, weekStart, weekEnd);
   });
   
   // Assign task rows for each week (to avoid overlaps)
@@ -105,7 +149,7 @@ function buildCalendarWithTasks(sheet, tasks, month, year, projectName) {
   });
   
   // Calculate row positions
-  let currentRow = 3;
+  let currentRow = startRow + 2;
   const weekRowInfo = [];
   
   for (let w = 0; w < weeks.length; w++) {
@@ -177,12 +221,26 @@ function buildCalendarWithTasks(sheet, tasks, month, year, projectName) {
   
   // Add borders
   const lastRow = weekRowInfo[weekRowInfo.length - 1].taskStartRow + weekRowInfo[weekRowInfo.length - 1].numTaskRows;
-  sheet.getRange(2, 1, lastRow - 1, 7).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange(startRow + 1, 1, lastRow - startRow, 7).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
   
   // Set column widths
   for (let i = 1; i <= 7; i++) {
     sheet.setColumnWidth(i, 110);
   }
+  
+  return lastRow;
+}
+
+// Get tasks for a specific month
+function getTasksForMonth(tasks, month, year) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  
+  return tasks.filter(task => {
+    const taskStart = new Date(task.startDate + 'T00:00:00');
+    const taskEnd = new Date(task.endDate + 'T00:00:00');
+    return taskStart <= monthEnd && taskEnd >= monthStart;
+  });
 }
 
 // Get tasks that appear in a given week
@@ -277,7 +335,7 @@ function getTaskPositionInWeek(task, week) {
   };
 }
 
-// Build the task list (columns I-N)
+// Build the task list (columns I-M)
 function buildTaskList(sheet, tasks) {
   const startCol = 9;
   
@@ -327,6 +385,76 @@ function buildTaskList(sheet, tasks) {
   sheet.setColumnWidth(startCol + 2, 80);
   sheet.setColumnWidth(startCol + 3, 45);
   sheet.setColumnWidth(startCol + 4, 100);
+}
+
+// Build due dates grouped by assignee (columns O-P)
+function buildAssigneeDueDates(sheet, tasks) {
+  const startCol = 15; // Column O
+  
+  // Title
+  sheet.getRange(1, startCol, 1, 2).merge();
+  sheet.getRange(1, startCol).setValue('DUE DATES BY ASSIGNEE');
+  sheet.getRange(1, startCol).setFontSize(14).setFontWeight('bold').setBackground('#faf8f5');
+  
+  // Group tasks by assignee
+  const tasksByAssignee = {};
+  for (const task of tasks) {
+    const assignee = task.assignee || 'Unassigned';
+    if (!tasksByAssignee[assignee]) {
+      tasksByAssignee[assignee] = [];
+    }
+    tasksByAssignee[assignee].push(task);
+  }
+  
+  // Sort assignees alphabetically
+  const assignees = Object.keys(tasksByAssignee).sort();
+  
+  let currentRow = 2;
+  
+  for (const assignee of assignees) {
+    // Assignee header
+    sheet.getRange(currentRow, startCol, 1, 2).merge();
+    sheet.getRange(currentRow, startCol).setValue(assignee);
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol).setBackground('#f5f2ed');
+    currentRow++;
+    
+    // Column headers
+    sheet.getRange(currentRow, startCol).setValue('Task');
+    sheet.getRange(currentRow, startCol + 1).setValue('Due Date');
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol + 1).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol, 1, 2).setBackground('#faf8f5');
+    currentRow++;
+    
+    // Sort tasks by end date (due date)
+    const assigneeTasks = tasksByAssignee[assignee].sort((a, b) => 
+      a.endDate.localeCompare(b.endDate)
+    );
+    
+    for (const task of assigneeTasks) {
+      // Task name with color
+      sheet.getRange(currentRow, startCol).setValue(task.name);
+      sheet.getRange(currentRow, startCol).setBackground(task.color);
+      const brightness = getColorBrightness(task.color);
+      sheet.getRange(currentRow, startCol).setFontColor(brightness > 128 ? '#2d2a26' : '#ffffff');
+      
+      // Due date
+      sheet.getRange(currentRow, startCol + 1).setValue(formatDate(task.endDate));
+      
+      currentRow++;
+    }
+    
+    currentRow++; // Add spacing between assignees
+  }
+  
+  // Add borders
+  sheet.getRange(2, startCol, currentRow - 2, 2).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
+  
+  // Set column widths
+  sheet.setColumnWidth(14, 30); // Spacer
+  sheet.setColumnWidth(startCol, 180);
+  sheet.setColumnWidth(startCol + 1, 80);
 }
 
 // Helper functions

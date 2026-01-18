@@ -14,7 +14,7 @@ import './CalendarGrid.css'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function CalendarGrid({ currentDate, onDateClick }) {
+function CalendarGrid({ currentDate, onDateClick, onEditTask }) {
   const { tasks } = useTasks()
   const today = new Date()
   
@@ -128,6 +128,7 @@ function CalendarGrid({ currentDate, onDateClick }) {
                           isStart={parseISO(task.startDate) >= week[0]}
                           isEnd={parseISO(task.endDate) <= week[6]}
                           weekDays={week}
+                          onEditTask={onEditTask}
                         />
                       )
                     })}

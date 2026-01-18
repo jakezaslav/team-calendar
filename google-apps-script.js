@@ -1,5 +1,5 @@
 /**
- * GOOGLE APPS SCRIPT - Team Calendar Sync
+ * GOOGLE APPS SCRIPT - Plan It! Sync
  * 
  * SETUP INSTRUCTIONS:
  * 1. Create a new Google Sheet
@@ -16,27 +16,29 @@
 // Handle POST requests from the calendar app
 function doPost(e) {
   try {
-    // Parse the incoming data
     const data = JSON.parse(e.postData.contents);
-    const { tasks, month, year, projectName } = data;
+    const { tasks, projectName } = data;
     
-    // Log for debugging (View > Executions in Apps Script)
-    console.log('Received sync request:', projectName, month, year);
+    console.log('Received sync request:', projectName);
     console.log('Tasks count:', tasks ? tasks.length : 0);
     
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    
-    // Clear existing content
     sheet.clear();
     
-    // Build the calendar and task list
-    buildCalendarGrid(sheet, tasks, month, year, projectName);
+    // Find all months that have tasks
+    const monthsWithTasks = getMonthsWithTasks(tasks);
+    
+    // Build all calendars sequentially
+    let currentRow = 1;
+    for (const monthInfo of monthsWithTasks) {
+      currentRow = buildCalendarWithTasks(sheet, tasks, monthInfo.month, monthInfo.year, projectName, currentRow);
+      currentRow += 2; // Add spacing between months
+    }
+    
+    // Build task list and assignee due dates to the right
     buildTaskList(sheet, tasks);
+    buildAssigneeDueDates(sheet, tasks);
     
-    // Auto-resize columns
-    sheet.autoResizeColumns(1, 14);
-    
-    // Return success
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, tasksProcessed: tasks.length }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -56,148 +58,149 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-// Build the calendar grid (columns A-G)
-function buildCalendarGrid(sheet, tasks, month, year, projectName) {
+// Get all unique months that have tasks, sorted chronologically
+function getMonthsWithTasks(tasks) {
+  const monthSet = new Set();
+  
+  for (const task of tasks) {
+    // Add months for start date
+    const startDate = new Date(task.startDate + 'T00:00:00');
+    monthSet.add(startDate.getFullYear() + '-' + String(startDate.getMonth()).padStart(2, '0'));
+    
+    // Add months for end date (in case task spans multiple months)
+    const endDate = new Date(task.endDate + 'T00:00:00');
+    monthSet.add(endDate.getFullYear() + '-' + String(endDate.getMonth()).padStart(2, '0'));
+    
+    // Add any months in between
+    let current = new Date(startDate);
+    while (current <= endDate) {
+      monthSet.add(current.getFullYear() + '-' + String(current.getMonth()).padStart(2, '0'));
+      current.setMonth(current.getMonth() + 1);
+    }
+  }
+  
+  // Convert to array and sort
+  const months = Array.from(monthSet).sort().map(key => {
+    const [year, month] = key.split('-');
+    return { year: parseInt(year), month: parseInt(month) };
+  });
+  
+  return months;
+}
+
+// Build calendar with proper multi-task support
+// Returns the last row used
+function buildCalendarWithTasks(sheet, tasks, month, year, projectName, startRow) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
-  // Title row
-  sheet.getRange('A1:G1').merge();
-  sheet.getRange('A1').setValue(`${projectName || 'Calendar'} - ${monthNames[month]} ${year}`);
-  sheet.getRange('A1').setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
-  sheet.getRange('A1').setBackground('#faf8f5');
+  // Filter tasks for this month
+  const monthTasks = getTasksForMonth(tasks, month, year);
+  
+  // Title
+  sheet.getRange(startRow, 1, 1, 7).merge();
+  sheet.getRange(startRow, 1).setValue(projectName + ' - ' + monthNames[month] + ' ' + year);
+  sheet.getRange(startRow, 1).setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
+  sheet.getRange(startRow, 1).setBackground('#faf8f5');
   
   // Day headers
   for (let i = 0; i < 7; i++) {
-    const cell = sheet.getRange(2, i + 1);
+    const cell = sheet.getRange(startRow + 1, i + 1);
     cell.setValue(dayNames[i]);
     cell.setFontWeight('bold');
     cell.setHorizontalAlignment('center');
     cell.setBackground('#f5f2ed');
   }
   
-  // Calculate calendar days
+  // Calculate calendar structure
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const startDayOfWeek = firstDay.getDay();
   const daysInMonth = lastDay.getDate();
   
-  // Build calendar grid
-  let currentRow = 3;
-  let currentCol = startDayOfWeek + 1;
-  
-  // Track which rows have task content
-  const taskRows = {};
+  // Build week data structure
+  const weeks = [];
+  let currentWeek = { dates: [], startCol: startDayOfWeek + 1 };
   
   for (let day = 1; day <= daysInMonth; day++) {
-    const cell = sheet.getRange(currentRow, currentCol);
-    cell.setValue(day);
-    cell.setVerticalAlignment('top');
-    cell.setHorizontalAlignment('center');
+    const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    const col = ((startDayOfWeek + day - 1) % 7) + 1;
     
-    // Store the row for this date for task placement
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (!taskRows[currentRow]) {
-      taskRows[currentRow] = { startCol: currentCol, dates: {} };
-    }
-    taskRows[currentRow].dates[dateStr] = currentCol;
+    currentWeek.dates.push({ day: day, dateStr: dateStr, col: col });
     
-    currentCol++;
-    if (currentCol > 7) {
-      currentCol = 1;
-      currentRow += 2; // Leave a row for tasks
+    if (col === 7 || day === daysInMonth) {
+      weeks.push(currentWeek);
+      currentWeek = { dates: [], startCol: 1 };
     }
   }
   
-  // Set row heights
-  const totalRows = currentRow + 1;
-  for (let r = 3; r <= totalRows; r++) {
-    if ((r - 3) % 2 === 0) {
-      sheet.setRowHeight(r, 25); // Date row
-    } else {
-      sheet.setRowHeight(r, 30); // Task row
-    }
-  }
-  
-  // Place tasks on the calendar
-  placeTasksOnCalendar(sheet, tasks, month, year, 3);
-  
-  // Add borders
-  const lastCalRow = currentRow + 1;
-  sheet.getRange(2, 1, lastCalRow - 1, 7).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
-}
-
-// Place tasks on the calendar grid
-function placeTasksOnCalendar(sheet, tasks, month, year) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startDayOfWeek = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-  
-  // Build a map of date -> column for each week row
-  const weekMap = []; // Array of { row, dates: { 'YYYY-MM-DD': col } }
-  let currentRow = 3;
-  let currentCol = startDayOfWeek + 1;
-  let currentWeek = { row: currentRow, dates: {} };
-  
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    currentWeek.dates[dateStr] = currentCol;
-    
-    currentCol++;
-    if (currentCol > 7 || day === daysInMonth) {
-      weekMap.push(currentWeek);
-      currentCol = 1;
-      currentRow += 2;
-      currentWeek = { row: currentRow, dates: {} };
-    }
-  }
-  
-  // Sort tasks by start date, then by duration (longer first)
-  const sortedTasks = [...tasks].sort((a, b) => {
-    if (a.startDate < b.startDate) return -1;
-    if (a.startDate > b.startDate) return 1;
-    const durA = daysBetween(a.startDate, a.endDate);
-    const durB = daysBetween(b.startDate, b.endDate);
-    return durB - durA;
+  // Calculate max tasks per week to determine row heights
+  const tasksByWeek = weeks.map(week => {
+    const weekStart = week.dates[0].dateStr;
+    const weekEnd = week.dates[week.dates.length - 1].dateStr;
+    return getTasksForWeek(monthTasks, weekStart, weekEnd);
   });
   
-  // Place each task
-  for (const task of sortedTasks) {
-    const taskStart = new Date(task.startDate + 'T00:00:00');
-    const taskEnd = new Date(task.endDate + 'T00:00:00');
+  // Assign task rows for each week (to avoid overlaps)
+  const taskRowAssignments = tasksByWeek.map((weekTasks, weekIndex) => {
+    return assignTaskRows(weekTasks, weeks[weekIndex]);
+  });
+  
+  // Calculate row positions
+  let currentRow = startRow + 2;
+  const weekRowInfo = [];
+  
+  for (let w = 0; w < weeks.length; w++) {
+    const numTaskRows = Math.max(1, taskRowAssignments[w].length);
+    weekRowInfo.push({
+      dateRow: currentRow,
+      taskStartRow: currentRow + 1,
+      numTaskRows: numTaskRows
+    });
+    currentRow += 1 + numTaskRows + 1; // date row + task rows + spacing
+  }
+  
+  // Draw calendar dates
+  for (let w = 0; w < weeks.length; w++) {
+    const week = weeks[w];
+    const rowInfo = weekRowInfo[w];
     
-    // Find weeks that this task spans
-    for (const week of weekMap) {
-      const weekDates = Object.keys(week.dates).sort();
-      if (weekDates.length === 0) continue;
+    // Draw date numbers
+    for (const dateInfo of week.dates) {
+      const cell = sheet.getRange(rowInfo.dateRow, dateInfo.col);
+      cell.setValue(dateInfo.day);
+      cell.setVerticalAlignment('top');
+      cell.setHorizontalAlignment('center');
+      cell.setFontWeight('bold');
+    }
+    
+    // Set row heights
+    sheet.setRowHeight(rowInfo.dateRow, 25);
+    for (let r = 0; r < rowInfo.numTaskRows; r++) {
+      sheet.setRowHeight(rowInfo.taskStartRow + r, 24);
+    }
+  }
+  
+  // Draw tasks
+  for (let w = 0; w < weeks.length; w++) {
+    const week = weeks[w];
+    const rowInfo = weekRowInfo[w];
+    const rowAssignments = taskRowAssignments[w];
+    
+    for (let rowIdx = 0; rowIdx < rowAssignments.length; rowIdx++) {
+      const tasksInRow = rowAssignments[rowIdx];
+      const taskRow = rowInfo.taskStartRow + rowIdx;
       
-      const weekStart = new Date(weekDates[0] + 'T00:00:00');
-      const weekEnd = new Date(weekDates[weekDates.length - 1] + 'T00:00:00');
-      
-      // Check if task overlaps this week
-      if (taskEnd < weekStart || taskStart > weekEnd) continue;
-      
-      // Find start and end columns for this task in this week
-      let startCol = null;
-      let endCol = null;
-      
-      for (const dateStr of weekDates) {
-        const date = new Date(dateStr + 'T00:00:00');
-        if (date >= taskStart && date <= taskEnd) {
-          if (startCol === null) startCol = week.dates[dateStr];
-          endCol = week.dates[dateStr];
-        }
-      }
-      
-      if (startCol !== null && endCol !== null) {
-        const taskRow = week.row + 1; // Task row is below date row
-        const numCols = endCol - startCol + 1;
+      for (const task of tasksInRow) {
+        const position = getTaskPositionInWeek(task, week);
+        if (!position) continue;
         
-        // Merge cells and add task name
-        if (numCols > 1) {
-          sheet.getRange(taskRow, startCol, 1, numCols).merge();
+        const { startCol, span } = position;
+        
+        // Merge cells if spanning multiple days
+        if (span > 1) {
+          sheet.getRange(taskRow, startCol, 1, span).merge();
         }
         
         const cell = sheet.getRange(taskRow, startCol);
@@ -209,17 +212,131 @@ function placeTasksOnCalendar(sheet, tasks, month, year) {
         cell.setHorizontalAlignment('center');
         cell.setWrap(true);
         
-        // Set text color based on background brightness
         const brightness = getColorBrightness(task.color);
         cell.setFontColor(brightness > 128 ? '#2d2a26' : '#ffffff');
       }
     }
   }
+  
+  // Add borders
+  const lastRow = weekRowInfo[weekRowInfo.length - 1].taskStartRow + weekRowInfo[weekRowInfo.length - 1].numTaskRows;
+  sheet.getRange(startRow + 1, 1, lastRow - startRow, 7).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
+  
+  // Set column widths
+  for (let i = 1; i <= 7; i++) {
+    sheet.setColumnWidth(i, 110);
+  }
+  
+  return lastRow;
 }
 
-// Build the task list (columns I-N)
+// Get tasks for a specific month
+function getTasksForMonth(tasks, month, year) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  
+  return tasks.filter(task => {
+    const taskStart = new Date(task.startDate + 'T00:00:00');
+    const taskEnd = new Date(task.endDate + 'T00:00:00');
+    return taskStart <= monthEnd && taskEnd >= monthStart;
+  });
+}
+
+// Get tasks that appear in a given week
+function getTasksForWeek(tasks, weekStartStr, weekEndStr) {
+  const weekStart = new Date(weekStartStr + 'T00:00:00');
+  const weekEnd = new Date(weekEndStr + 'T00:00:00');
+  
+  return tasks.filter(task => {
+    const taskStart = new Date(task.startDate + 'T00:00:00');
+    const taskEnd = new Date(task.endDate + 'T00:00:00');
+    return taskStart <= weekEnd && taskEnd >= weekStart;
+  }).sort((a, b) => {
+    // Sort by start date, then by duration (longer first)
+    if (a.startDate < b.startDate) return -1;
+    if (a.startDate > b.startDate) return 1;
+    const durA = daysBetween(a.startDate, a.endDate);
+    const durB = daysBetween(b.startDate, b.endDate);
+    return durB - durA;
+  });
+}
+
+// Assign tasks to rows to avoid overlaps
+function assignTaskRows(weekTasks, week) {
+  const rows = [];
+  
+  for (const task of weekTasks) {
+    const position = getTaskPositionInWeek(task, week);
+    if (!position) continue;
+    
+    const taskStart = position.startCol;
+    const taskEnd = position.startCol + position.span - 1;
+    
+    // Find first row where this task fits
+    let rowIndex = -1;
+    for (let r = 0; r < rows.length; r++) {
+      const hasOverlap = rows[r].some(existingTask => {
+        const existingPos = getTaskPositionInWeek(existingTask, week);
+        if (!existingPos) return false;
+        const existingStart = existingPos.startCol;
+        const existingEnd = existingPos.startCol + existingPos.span - 1;
+        return !(taskEnd < existingStart || taskStart > existingEnd);
+      });
+      
+      if (!hasOverlap) {
+        rowIndex = r;
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      rowIndex = rows.length;
+      rows.push([]);
+    }
+    
+    rows[rowIndex].push(task);
+  }
+  
+  return rows;
+}
+
+// Get task position within a week
+function getTaskPositionInWeek(task, week) {
+  const taskStart = new Date(task.startDate + 'T00:00:00');
+  const taskEnd = new Date(task.endDate + 'T00:00:00');
+  
+  const weekDates = week.dates;
+  const weekStartDate = new Date(weekDates[0].dateStr + 'T00:00:00');
+  const weekEndDate = new Date(weekDates[weekDates.length - 1].dateStr + 'T00:00:00');
+  
+  // Check if task overlaps this week
+  if (taskEnd < weekStartDate || taskStart > weekEndDate) {
+    return null;
+  }
+  
+  // Find start column
+  let startCol = null;
+  let endCol = null;
+  
+  for (const dateInfo of weekDates) {
+    const date = new Date(dateInfo.dateStr + 'T00:00:00');
+    if (date >= taskStart && date <= taskEnd) {
+      if (startCol === null) startCol = dateInfo.col;
+      endCol = dateInfo.col;
+    }
+  }
+  
+  if (startCol === null) return null;
+  
+  return {
+    startCol: startCol,
+    span: endCol - startCol + 1
+  };
+}
+
+// Build the task list (columns I-M)
 function buildTaskList(sheet, tasks) {
-  const startCol = 9; // Column I
+  const startCol = 9;
   
   // Title
   sheet.getRange(1, startCol, 1, 5).merge();
@@ -236,9 +353,7 @@ function buildTaskList(sheet, tasks) {
   }
   
   // Sort tasks by start date
-  const sortedTasks = [...tasks].sort((a, b) => 
-    a.startDate.localeCompare(b.startDate)
-  );
+  const sortedTasks = [...tasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
   
   // Add task rows
   for (let i = 0; i < sortedTasks.length; i++) {
@@ -246,55 +361,114 @@ function buildTaskList(sheet, tasks) {
     const row = i + 3;
     const duration = daysBetween(task.startDate, task.endDate) + 1;
     
-    // Color indicator + name
     sheet.getRange(row, startCol).setValue(task.name);
     sheet.getRange(row, startCol).setBackground(task.color);
     const brightness = getColorBrightness(task.color);
     sheet.getRange(row, startCol).setFontColor(brightness > 128 ? '#2d2a26' : '#ffffff');
     
-    // Dates
     sheet.getRange(row, startCol + 1).setValue(formatDate(task.startDate));
     sheet.getRange(row, startCol + 2).setValue(formatDate(task.endDate));
-    
-    // Duration
     sheet.getRange(row, startCol + 3).setValue(duration);
     sheet.getRange(row, startCol + 3).setHorizontalAlignment('center');
-    
-    // Assignee
     sheet.getRange(row, startCol + 4).setValue(task.assignee || '');
   }
   
   // Add borders
-  const lastRow = sortedTasks.length + 2;
+  const lastRow = Math.max(sortedTasks.length + 2, 3);
   sheet.getRange(2, startCol, lastRow - 1, 5).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
   
   // Set column widths
-  sheet.setColumnWidth(startCol, 180);     // Task name
-  sheet.setColumnWidth(startCol + 1, 90);  // Start
-  sheet.setColumnWidth(startCol + 2, 90);  // End
-  sheet.setColumnWidth(startCol + 3, 50);  // Days
-  sheet.setColumnWidth(startCol + 4, 100); // Assignee
-  
-  // Add spacer column
-  sheet.setColumnWidth(8, 30);
+  sheet.setColumnWidth(8, 30); // Spacer
+  sheet.setColumnWidth(startCol, 180);
+  sheet.setColumnWidth(startCol + 1, 80);
+  sheet.setColumnWidth(startCol + 2, 80);
+  sheet.setColumnWidth(startCol + 3, 45);
+  sheet.setColumnWidth(startCol + 4, 100);
 }
 
-// Helper: Calculate days between two date strings
+// Build due dates grouped by assignee (columns O-P)
+function buildAssigneeDueDates(sheet, tasks) {
+  const startCol = 15; // Column O
+  
+  // Title
+  sheet.getRange(1, startCol, 1, 2).merge();
+  sheet.getRange(1, startCol).setValue('DUE DATES BY ASSIGNEE');
+  sheet.getRange(1, startCol).setFontSize(14).setFontWeight('bold').setBackground('#faf8f5');
+  
+  // Group tasks by assignee
+  const tasksByAssignee = {};
+  for (const task of tasks) {
+    const assignee = task.assignee || 'Unassigned';
+    if (!tasksByAssignee[assignee]) {
+      tasksByAssignee[assignee] = [];
+    }
+    tasksByAssignee[assignee].push(task);
+  }
+  
+  // Sort assignees alphabetically
+  const assignees = Object.keys(tasksByAssignee).sort();
+  
+  let currentRow = 2;
+  
+  for (const assignee of assignees) {
+    // Assignee header
+    sheet.getRange(currentRow, startCol, 1, 2).merge();
+    sheet.getRange(currentRow, startCol).setValue(assignee);
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol).setBackground('#f5f2ed');
+    currentRow++;
+    
+    // Column headers
+    sheet.getRange(currentRow, startCol).setValue('Task');
+    sheet.getRange(currentRow, startCol + 1).setValue('Due Date');
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol + 1).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol, 1, 2).setBackground('#faf8f5');
+    currentRow++;
+    
+    // Sort tasks by end date (due date)
+    const assigneeTasks = tasksByAssignee[assignee].sort((a, b) => 
+      a.endDate.localeCompare(b.endDate)
+    );
+    
+    for (const task of assigneeTasks) {
+      // Task name with color
+      sheet.getRange(currentRow, startCol).setValue(task.name);
+      sheet.getRange(currentRow, startCol).setBackground(task.color);
+      const brightness = getColorBrightness(task.color);
+      sheet.getRange(currentRow, startCol).setFontColor(brightness > 128 ? '#2d2a26' : '#ffffff');
+      
+      // Due date
+      sheet.getRange(currentRow, startCol + 1).setValue(formatDate(task.endDate));
+      
+      currentRow++;
+    }
+    
+    currentRow++; // Add spacing between assignees
+  }
+  
+  // Add borders
+  sheet.getRange(2, startCol, currentRow - 2, 2).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
+  
+  // Set column widths
+  sheet.setColumnWidth(14, 30); // Spacer
+  sheet.setColumnWidth(startCol, 180);
+  sheet.setColumnWidth(startCol + 1, 80);
+}
+
+// Helper functions
 function daysBetween(startStr, endStr) {
   const start = new Date(startStr + 'T00:00:00');
   const end = new Date(endStr + 'T00:00:00');
   return Math.round((end - start) / (1000 * 60 * 60 * 24));
 }
 
-// Helper: Format date string to readable format
 function formatDate(dateStr) {
   const date = new Date(dateStr + 'T00:00:00');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()}`;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[date.getMonth()] + ' ' + date.getDate();
 }
 
-// Helper: Get color brightness (0-255)
 function getColorBrightness(hexColor) {
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substr(0, 2), 16);
@@ -302,4 +476,3 @@ function getColorBrightness(hexColor) {
   const b = parseInt(hex.substr(4, 2), 16);
   return (r * 299 + g * 587 + b * 114) / 1000;
 }
-

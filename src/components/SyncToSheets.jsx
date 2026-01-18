@@ -56,8 +56,6 @@ function SyncToSheets({ currentDate }) {
 
     const payload = {
       tasks: tasks,
-      month: currentDate.getMonth(),
-      year: currentDate.getFullYear(),
       projectName: activeProject?.name || 'Calendar'
     }
 

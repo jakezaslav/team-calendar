@@ -3,7 +3,7 @@ import { useTasks } from '../context/TaskContext'
 import { format, addDays, parseISO, differenceInDays } from '../utils/dateUtils'
 import './TaskBar.css'
 
-function TaskBar({ task, startCol, span, isStart, isEnd, weekDays }) {
+function TaskBar({ task, startCol, span, isStart, isEnd, weekDays, onEditTask }) {
   const { selectedTaskId, selectTask, updateTask } = useTasks()
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(null) // 'left' or 'right'
@@ -17,6 +17,13 @@ function TaskBar({ task, startCol, span, isStart, isEnd, weekDays }) {
     if (!isDragging && !isResizing) {
       e.stopPropagation()
       selectTask(task.id)
+    }
+  }
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation()
+    if (onEditTask) {
+      onEditTask(task)
     }
   }
 
@@ -235,6 +242,7 @@ function TaskBar({ task, startCol, span, isStart, isEnd, weekDays }) {
       className={`task-bar ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''}`}
       style={style}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onMouseDown={handleDragStart}
     >
       {/* Left resize handle */}
