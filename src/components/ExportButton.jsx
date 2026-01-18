@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { exportToPdf, printCalendar } from '../utils/exportPdf'
+import { exportToPdf } from '../utils/exportPdf'
 import { useTasks } from '../context/TaskContext'
-import { format } from '../utils/dateUtils'
 import './ExportButton.css'
 
-function ExportButton({ currentDate }) {
-  const { activeProject } = useTasks()
+function ExportButton() {
+  const { activeProject, allTasks, assignees } = useTasks()
   const [isOpen, setIsOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const dropdownRef = useRef(null)
@@ -21,21 +20,23 @@ function ExportButton({ currentDate }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleExportPdf = async () => {
+  const handleExportAll = async () => {
     setIsExporting(true)
     setIsOpen(false)
     
-    const calendarMain = document.querySelector('.app-main')
-    const monthYear = format(currentDate, 'MMMM yyyy')
-    const title = `${activeProject?.name || 'Calendar'} - ${monthYear}`
-    
-    await exportToPdf(calendarMain, title)
+    const projectName = activeProject?.name || 'Calendar'
+    await exportToPdf(allTasks, projectName)
     setIsExporting(false)
   }
 
-  const handlePrint = () => {
+  const handleExportByAssignee = async (assignee) => {
+    setIsExporting(true)
     setIsOpen(false)
-    printCalendar()
+    
+    const filteredTasks = allTasks.filter(t => t.assignee === assignee)
+    const projectName = `${activeProject?.name || 'Calendar'} - ${assignee}`
+    await exportToPdf(filteredTasks, projectName)
+    setIsExporting(false)
   }
 
   return (
@@ -59,22 +60,33 @@ function ExportButton({ currentDate }) {
 
       {isOpen && (
         <div className="export-dropdown">
-          <button className="export-option" onClick={handleExportPdf}>
+          <button className="export-option" onClick={handleExportAll}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M4 1H10L14 5V14C14 14.5523 13.5523 15 13 15H4C3.44772 15 3 14.5523 3 14V2C3 1.44772 3.44772 1 4 1Z" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M10 1V5H14" stroke="currentColor" strokeWidth="1.5"/>
-              <text x="5" y="12" fontSize="4" fontWeight="bold" fill="currentColor">PDF</text>
             </svg>
-            Download PDF
+            Export All Tasks
           </button>
-          <button className="export-option" onClick={handlePrint}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 6V1H12V6" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M4 12H2C1.44772 12 1 11.5523 1 11V7C1 6.44772 1.44772 6 2 6H14C14.5523 6 15 6.44772 15 7V11C15 11.5523 14.5523 12 14 12H12" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M4 9H12V15H4V9Z" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-            Print
-          </button>
+          
+          {assignees.length > 0 && (
+            <>
+              <div className="export-divider" />
+              <div className="export-section-label">Export by Assignee</div>
+              {assignees.map(assignee => (
+                <button 
+                  key={assignee}
+                  className="export-option export-option-assignee"
+                  onClick={() => handleExportByAssignee(assignee)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M3 14C3 11.2386 5.23858 9 8 9C10.7614 9 13 11.2386 13 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  {assignee}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -82,4 +94,3 @@ function ExportButton({ currentDate }) {
 }
 
 export default ExportButton
-

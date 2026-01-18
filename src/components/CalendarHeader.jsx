@@ -66,7 +66,7 @@ function CalendarHeader({ currentDate, onDateChange, onAddTask, onUndo, canUndo 
           Undo
         </button>
         <SyncToSheets currentDate={currentDate} />
-        <ExportButton currentDate={currentDate} />
+        <ExportButton />
         <button className="add-task-btn" onClick={onAddTask}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M9 3.75V14.25M3.75 9H14.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
