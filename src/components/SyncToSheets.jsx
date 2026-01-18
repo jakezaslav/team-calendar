@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTasks } from '../context/TaskContext'
 import { GOOGLE_APPS_SCRIPT } from '../utils/googleAppsScript'
+import gearIcon from '../assets/gear.png'
 import './SyncToSheets.css'
 
 function SyncToSheets({ currentDate }) {
@@ -60,9 +61,6 @@ function SyncToSheets({ currentDate }) {
       projectName: activeProject?.name || 'Calendar'
     }
 
-    console.log('Syncing to Google Sheets...')
-    console.log('Tasks:', tasks.length)
-
     try {
       // Google Apps Script requires no-cors mode from localhost
       // The request goes through, we just can't read the response
@@ -76,9 +74,7 @@ function SyncToSheets({ currentDate }) {
       })
       
       // If we get here without throwing, the request was sent
-      // Check your Google Sheet to verify it worked!
       setSyncStatus('success')
-      console.log('✓ Sync request sent! Check your Google Sheet.')
       
     } catch (error) {
       console.error('Sync error:', error)
@@ -143,10 +139,7 @@ function SyncToSheets({ currentDate }) {
             </button>
             <div className="sync-dropdown-divider" />
             <button className="sync-option settings" onClick={() => { setShowSettings(true); setIsOpen(false); }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M8 1V3M8 13V15M1 8H3M13 8H15M2.93 2.93L4.34 4.34M11.66 11.66L13.07 13.07M2.93 13.07L4.34 11.66M11.66 4.34L13.07 2.93" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+              <img src={gearIcon} alt="" width="16" height="16" />
               Settings
             </button>
             {!webhookUrl && (
@@ -224,17 +217,6 @@ function SyncToSheets({ currentDate }) {
                     Test Connection
                   </button>
                 )}
-              </div>
-
-              <div className="troubleshooting">
-                <h4>Troubleshooting</h4>
-                <ul>
-                  <li>Make sure you clicked <strong>"Deploy → New deployment"</strong> (not just save)</li>
-                  <li>Set "Who has access" to <strong>"Anyone"</strong></li>
-                  <li>After making changes, create a <strong>new deployment</strong> (not edit existing)</li>
-                  <li>The URL should start with <code>https://script.google.com/macros/s/</code></li>
-                  <li>Open browser console (F12) to see detailed sync logs</li>
-                </ul>
               </div>
 
               <div className="sync-settings-actions">

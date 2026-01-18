@@ -1,28 +1,58 @@
 import { useState, useEffect } from 'react'
 import { useTasks } from '../context/TaskContext'
-import { formatDate, getTaskDuration, formatDateForInput, parseISO, addDays, format } from '../utils/dateUtils'
+import { formatDate, getTaskDuration, formatDateForInput, parseISO, addDays, format, differenceInDays } from '../utils/dateUtils'
 import './TaskSidebar.css'
 
 function TaskSidebar() {
   const { tasks, selectedTaskId, selectTask, updateTask, deleteTask } = useTasks()
+  
+  // State for editable duration input (allows backspacing)
+  const [editingDuration, setEditingDuration] = useState({ taskId: null, value: '', fallback: 1 })
+  
+  // State for locked tasks (when locked, start date change shifts end date proportionally)
+  const [lockedTasks, setLockedTasks] = useState(new Set())
 
   // Sort tasks by start date
   const sortedTasks = [...tasks].sort((a, b) => 
     new Date(a.startDate) - new Date(b.startDate)
   )
 
-  const handleStartDateChange = (taskId, newStartDate, currentEndDate) => {
-    const start = parseISO(newStartDate)
+  const toggleLock = (taskId, e) => {
+    e.stopPropagation()
+    setLockedTasks(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId)
+      } else {
+        newSet.add(taskId)
+      }
+      return newSet
+    })
+  }
+
+  const handleStartDateChange = (taskId, newStartDate, currentStartDate, currentEndDate) => {
+    const newStart = parseISO(newStartDate)
+    const oldStart = parseISO(currentStartDate)
     const end = parseISO(currentEndDate)
     
-    // If new start is after end, adjust end to match start
-    if (start > end) {
+    // If locked, shift end date by the same amount
+    if (lockedTasks.has(taskId)) {
+      const duration = differenceInDays(end, oldStart)
+      const newEnd = addDays(newStart, duration)
       updateTask(taskId, { 
         startDate: newStartDate, 
-        endDate: newStartDate 
+        endDate: format(newEnd, 'yyyy-MM-dd') 
       })
     } else {
-      updateTask(taskId, { startDate: newStartDate })
+      // If new start is after end, adjust end to match start
+      if (newStart > end) {
+        updateTask(taskId, { 
+          startDate: newStartDate, 
+          endDate: newStartDate 
+        })
+      } else {
+        updateTask(taskId, { startDate: newStartDate })
+      }
     }
   }
 
@@ -41,9 +71,22 @@ function TaskSidebar() {
     }
   }
 
-  const handleDurationChange = (taskId, newDuration, currentStartDate) => {
-    const duration = parseInt(newDuration, 10)
-    if (isNaN(duration) || duration < 1) return
+  const handleDurationFocus = (taskId, currentDuration) => {
+    setEditingDuration({ taskId, value: String(currentDuration), fallback: currentDuration })
+  }
+
+  const handleDurationInputChange = (e) => {
+    setEditingDuration(prev => ({ ...prev, value: e.target.value }))
+  }
+
+  const handleDurationBlur = (taskId, currentStartDate) => {
+    const duration = parseInt(editingDuration.value, 10)
+    
+    if (isNaN(duration) || duration < 1) {
+      // Revert to fallback value - no change needed to task
+      setEditingDuration({ taskId: null, value: '', fallback: 1 })
+      return
+    }
     
     const start = parseISO(currentStartDate)
     const newEnd = addDays(start, duration - 1)
@@ -51,6 +94,17 @@ function TaskSidebar() {
     updateTask(taskId, { 
       endDate: format(newEnd, 'yyyy-MM-dd') 
     })
+    
+    setEditingDuration({ taskId: null, value: '', fallback: 1 })
+  }
+
+  const handleDurationKeyDown = (e, taskId, currentStartDate) => {
+    if (e.key === 'Enter') {
+      e.target.blur()
+    } else if (e.key === 'Escape') {
+      setEditingDuration({ taskId: null, value: '', fallback: 1 })
+      e.target.blur()
+    }
   }
 
   const handleDelete = (taskId, taskName) => {
@@ -124,7 +178,7 @@ function TaskSidebar() {
                       <input
                         type="date"
                         value={task.startDate}
-                        onChange={(e) => handleStartDateChange(task.id, e.target.value, task.endDate)}
+                        onChange={(e) => handleStartDateChange(task.id, e.target.value, task.startDate, task.endDate)}
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
@@ -141,13 +195,35 @@ function TaskSidebar() {
                     
                     <div className="duration-field">
                       <label>Days</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={duration}
-                        onChange={(e) => handleDurationChange(task.id, e.target.value, task.startDate)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      <div className="duration-input-wrapper">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={editingDuration.taskId === task.id ? editingDuration.value : duration}
+                          onFocus={() => handleDurationFocus(task.id, duration)}
+                          onChange={handleDurationInputChange}
+                          onBlur={() => handleDurationBlur(task.id, task.startDate)}
+                          onKeyDown={(e) => handleDurationKeyDown(e, task.id, task.startDate)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                          className={`lock-btn ${lockedTasks.has(task.id) ? 'locked' : ''}`}
+                          onClick={(e) => toggleLock(task.id, e)}
+                          title={lockedTasks.has(task.id) ? 'Unlock dates (end date will stay fixed when moving start)' : 'Lock dates (moving start will shift end proportionally)'}
+                        >
+                          {lockedTasks.has(task.id) ? (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                              <rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                              <path d="M4 5V3.5C4 2.39543 4.89543 1.5 6 1.5C7.10457 1.5 8 2.39543 8 3.5V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                            </svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                              <rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                              <path d="M8 5V3.5C8 2.39543 8.89543 1.5 10 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -155,8 +155,42 @@
 }
 
 .duration-field {
-  width: 56px;
+  width: 72px;
   flex-shrink: 0;
+}
+
+.duration-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.duration-input-wrapper input {
+  flex: 1;
+  min-width: 0;
+}
+
+.lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  opacity: 0.5;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.lock-btn:hover {
+  opacity: 1;
+  background: var(--color-bg-warm);
+}
+
+.lock-btn.locked {
+  opacity: 1;
+  color: var(--color-text);
 }
 
 .date-field label,

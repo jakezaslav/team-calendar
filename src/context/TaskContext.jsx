@@ -44,7 +44,7 @@ const INITIAL_TASKS = {
       id: 'demo-2',
       name: 'Research & Discovery Phase',
       assignee: 'Alex Kim',
-      startDate: getMonthDate(3),
+      startDate: getMonthDate(4),
       endDate: getMonthDate(7),
       color: '#7d9bb8',
     },
