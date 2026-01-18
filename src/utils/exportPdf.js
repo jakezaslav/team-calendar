@@ -288,44 +288,41 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
     pdf.text(`${tasks.length} tasks in ${projectName}`, margin, margin + 15)
     
     // Task list
-    const listTop = margin + 25
     const colWidths = { task: 90, start: 35, end: 35, days: 20, assignee: 60 }
     const rowHeight = 7
-    
-    // Headers
-    let x = margin
-    pdf.setFillColor(colors.headerBg.r, colors.headerBg.g, colors.headerBg.b)
-    pdf.rect(margin, listTop, contentWidth, rowHeight, 'F')
-    
-    pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(8)
-    pdf.setTextColor(colors.muted.r, colors.muted.g, colors.muted.b)
-    
-    pdf.text('Task', x + 2, listTop + 4.5)
-    x += colWidths.task
-    pdf.text('Start', x + 2, listTop + 4.5)
-    x += colWidths.start
-    pdf.text('End', x + 2, listTop + 4.5)
-    x += colWidths.end
-    pdf.text('Days', x + 2, listTop + 4.5)
-    x += colWidths.days
-    pdf.text('Assignee', x + 2, listTop + 4.5)
     
     // Sort tasks by start date
     const sortedTasks = [...tasks].sort((a, b) => a.startDate.localeCompare(b.startDate))
     
-    // Task rows
-    let y = listTop + rowHeight
-    const maxRows = Math.floor((pageHeight - listTop - rowHeight - 20) / rowHeight)
+    // Helper function to draw table headers
+    const drawTableHeaders = (listTop) => {
+      let x = margin
+      pdf.setFillColor(colors.headerBg.r, colors.headerBg.g, colors.headerBg.b)
+      pdf.rect(margin, listTop, contentWidth, rowHeight, 'F')
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(8)
+      pdf.setTextColor(colors.muted.r, colors.muted.g, colors.muted.b)
+      
+      pdf.text('Task', x + 2, listTop + 4.5)
+      x += colWidths.task
+      pdf.text('Start', x + 2, listTop + 4.5)
+      x += colWidths.start
+      pdf.text('End', x + 2, listTop + 4.5)
+      x += colWidths.end
+      pdf.text('Days', x + 2, listTop + 4.5)
+      x += colWidths.days
+      pdf.text('Assignee', x + 2, listTop + 4.5)
+    }
     
-    for (let i = 0; i < Math.min(sortedTasks.length, maxRows); i++) {
-      const task = sortedTasks[i]
+    // Helper function to draw a task row
+    const drawTaskRow = (task, y, rowIndex) => {
       const startDate = parseISO(task.startDate)
       const endDate = parseISO(task.endDate)
       const duration = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1
       
       // Row background (alternating)
-      if (i % 2 === 1) {
+      if (rowIndex % 2 === 1) {
         pdf.setFillColor(252, 251, 250)
         pdf.rect(margin, y, contentWidth, rowHeight, 'F')
       }
@@ -335,7 +332,7 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
       pdf.setLineWidth(0.1)
       pdf.line(margin, y + rowHeight, margin + contentWidth, y + rowHeight)
       
-      x = margin
+      let x = margin
       
       // Color indicator + Task name
       const taskColor = hexToRgb(task.color)
@@ -372,23 +369,65 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
         assignee = assignee.slice(0, -4) + '...'
       }
       pdf.text(assignee, x + 2, y + 4.5)
-      
-      y += rowHeight
     }
     
-    if (sortedTasks.length > maxRows) {
-      pdf.setFont('helvetica', 'italic')
+    // Helper function to draw page footer
+    const drawPageFooter = (pageNum) => {
+      pdf.setFont('helvetica', 'normal')
       pdf.setFontSize(8)
       pdf.setTextColor(colors.light.r, colors.light.g, colors.light.b)
-      pdf.text(`+ ${sortedTasks.length - maxRows} more tasks`, margin, y + 5)
+      pdf.text(`${projectName} · Task Summary`, margin, pageHeight - 10)
+      pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
     }
     
-    // Page footer
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(8)
-    pdf.setTextColor(colors.light.r, colors.light.g, colors.light.b)
-    pdf.text(`${projectName} · Task Summary`, margin, pageHeight - 10)
-    pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
+    // First task summary page
+    let listTop = margin + 25
+    drawTableHeaders(listTop)
+    
+    let y = listTop + rowHeight
+    const maxRowsFirstPage = Math.floor((pageHeight - listTop - rowHeight - 20) / rowHeight)
+    const maxRowsPerPage = Math.floor((pageHeight - margin - rowHeight - 20) / rowHeight)
+    
+    let taskIndex = 0
+    
+    // Draw tasks on first page
+    while (taskIndex < sortedTasks.length && taskIndex < maxRowsFirstPage) {
+      drawTaskRow(sortedTasks[taskIndex], y, taskIndex)
+      y += rowHeight
+      taskIndex++
+    }
+    
+    drawPageFooter()
+    
+    // Continue on additional pages if needed
+    while (taskIndex < sortedTasks.length) {
+      pdf.addPage()
+      
+      // Background
+      pdf.setFillColor(colors.background.r, colors.background.g, colors.background.b)
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+      
+      // Title
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(20)
+      pdf.setTextColor(colors.primary.r, colors.primary.g, colors.primary.b)
+      pdf.text('Task Summary (continued)', margin, margin + 8)
+      
+      listTop = margin + 18
+      drawTableHeaders(listTop)
+      
+      y = listTop + rowHeight
+      let rowsOnPage = 0
+      
+      while (taskIndex < sortedTasks.length && rowsOnPage < maxRowsPerPage) {
+        drawTaskRow(sortedTasks[taskIndex], y, taskIndex)
+        y += rowHeight
+        taskIndex++
+        rowsOnPage++
+      }
+      
+      drawPageFooter()
+    }
 
     // Save the PDF
     const filename = `${projectName.toLowerCase().replace(/\s+/g, '-')}-calendar.pdf`
