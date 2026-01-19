@@ -91,23 +91,58 @@
 }
 
 /* Edit Form */
-.project-edit-form {
+.project-edit-form,
+.project-duplicate-form {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
 
-.project-edit-form input {
+.project-edit-form input,
+.project-duplicate-form input {
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 0.875rem;
 }
 
-.project-edit-form input:focus {
+.project-edit-form input:focus,
+.project-duplicate-form input:focus {
   outline: none;
   border-color: var(--color-text);
+}
+
+/* Duplicate Form Specific */
+.duplicate-form-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.duplicate-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.project-duplicate-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.project-duplicate-form .form-group label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.project-duplicate-form input[type="date"] {
+  width: 100%;
 }
 
 .color-options {

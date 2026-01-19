@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useMemo, useState } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
-import { generateId } from '../utils/dateUtils'
+import { generateId, parseISO, differenceInDays, addDays, format } from '../utils/dateUtils'
 
 const TaskContext = createContext(null)
 
@@ -121,6 +121,9 @@ export function TaskProvider({ children }) {
   
   // Assignee filter - null means show all, otherwise filter by assignee name
   const [assigneeFilter, setAssigneeFilter] = useState(null)
+  
+  // Navigation request - set to a date to request calendar navigation
+  const [navigateToDate, setNavigateToDate] = useState(null)
 
   // Get current project
   const activeProject = useMemo(() => 
@@ -203,6 +206,52 @@ export function TaskProvider({ children }) {
     setSelectedTaskId(null) // Clear selection when switching projects
     setAssigneeFilter(null) // Clear filter when switching projects
   }, [setActiveProjectId, setSelectedTaskId])
+
+  const duplicateProject = useCallback((sourceProjectId, newName, newStartDate) => {
+    const sourceProject = projects.find(p => p.id === sourceProjectId)
+    if (!sourceProject) return null
+    
+    const sourceTasks = tasksByProject[sourceProjectId] || []
+    
+    // Create new project with same color
+    const newProject = {
+      id: generateId().replace('task-', 'proj-'),
+      name: newName,
+      color: sourceProject.color,
+    }
+    
+    // If there are tasks, calculate date offset and copy them
+    let newTasks = []
+    if (sourceTasks.length > 0) {
+      // Find earliest start date
+      const earliestDate = sourceTasks.reduce((earliest, task) => {
+        return task.startDate < earliest ? task.startDate : earliest
+      }, sourceTasks[0].startDate)
+      
+      // Calculate offset in days
+      const offset = differenceInDays(parseISO(newStartDate), parseISO(earliestDate))
+      
+      // Copy tasks with shifted dates and new IDs
+      newTasks = sourceTasks.map(task => ({
+        ...task,
+        id: generateId(),
+        startDate: format(addDays(parseISO(task.startDate), offset), 'yyyy-MM-dd'),
+        endDate: format(addDays(parseISO(task.endDate), offset), 'yyyy-MM-dd'),
+      }))
+    }
+    
+    // Update state
+    setProjects(prev => [...prev, newProject])
+    setTasksByProject(prev => ({ ...prev, [newProject.id]: newTasks }))
+    setActiveProjectId(newProject.id)
+    setSelectedTaskId(null)
+    setAssigneeFilter(null)
+    
+    // Request navigation to the new start date
+    setNavigateToDate(parseISO(newStartDate))
+    
+    return newProject
+  }, [projects, tasksByProject, setProjects, setTasksByProject, setActiveProjectId, setSelectedTaskId])
 
   // Helper to add action to undo history
   const pushToHistory = useCallback((action) => {
@@ -344,6 +393,7 @@ export function TaskProvider({ children }) {
     updateProject,
     deleteProject,
     switchProject,
+    duplicateProject,
     // Tasks
     tasks,
     allTasks,
@@ -361,6 +411,9 @@ export function TaskProvider({ children }) {
     // Undo
     undo,
     canUndo,
+    // Navigation
+    navigateToDate,
+    clearNavigateToDate: () => setNavigateToDate(null),
   }
 
   return (

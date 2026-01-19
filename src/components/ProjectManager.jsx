@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTasks } from '../context/TaskContext'
+import { formatDateForInput } from '../utils/dateUtils'
 import './ProjectManager.css'
 
 const PROJECT_COLORS = [
@@ -8,11 +9,13 @@ const PROJECT_COLORS = [
 ]
 
 function ProjectManager({ onClose }) {
-  const { projects, activeProjectId, addProject, updateProject, deleteProject, switchProject } = useTasks()
+  const { projects, activeProjectId, addProject, updateProject, deleteProject, switchProject, duplicateProject } = useTasks()
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', color: '' })
   const [isCreating, setIsCreating] = useState(false)
   const [newProject, setNewProject] = useState({ name: '', color: PROJECT_COLORS[0] })
+  const [duplicatingId, setDuplicatingId] = useState(null)
+  const [duplicateForm, setDuplicateForm] = useState({ name: '', startDate: '' })
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -54,6 +57,28 @@ function ProjectManager({ onClose }) {
       setNewProject({ name: '', color: PROJECT_COLORS[0] })
       setIsCreating(false)
     }
+  }
+
+  const handleStartDuplicate = (project) => {
+    setDuplicatingId(project.id)
+    setDuplicateForm({
+      name: `Copy of ${project.name}`,
+      startDate: formatDateForInput(new Date())
+    })
+  }
+
+  const handleDuplicate = () => {
+    if (duplicateForm.name.trim() && duplicateForm.startDate) {
+      duplicateProject(duplicatingId, duplicateForm.name.trim(), duplicateForm.startDate)
+      setDuplicatingId(null)
+      setDuplicateForm({ name: '', startDate: '' })
+      onClose()
+    }
+  }
+
+  const handleCancelDuplicate = () => {
+    setDuplicatingId(null)
+    setDuplicateForm({ name: '', startDate: '' })
   }
 
   return (
@@ -106,6 +131,45 @@ function ProjectManager({ onClose }) {
                       </button>
                     </div>
                   </div>
+                ) : duplicatingId === project.id ? (
+                  /* Duplicate Mode */
+                  <div className="project-duplicate-form">
+                    <div className="duplicate-form-header">
+                      <span 
+                        className="project-color-dot"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="duplicate-label">Duplicate project</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={duplicateForm.name}
+                      onChange={(e) => setDuplicateForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="New project name"
+                      autoFocus
+                    />
+                    <div className="form-group">
+                      <label htmlFor="duplicate-start-date">Start date</label>
+                      <input
+                        id="duplicate-start-date"
+                        type="date"
+                        value={duplicateForm.startDate}
+                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, startDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="edit-actions">
+                      <button className="btn btn-sm btn-secondary" onClick={handleCancelDuplicate}>
+                        Cancel
+                      </button>
+                      <button 
+                        className="btn btn-sm btn-primary" 
+                        onClick={handleDuplicate}
+                        disabled={!duplicateForm.name.trim() || !duplicateForm.startDate}
+                      >
+                        Duplicate
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   /* View Mode */
                   <>
@@ -120,6 +184,16 @@ function ProjectManager({ onClose }) {
                       )}
                     </div>
                     <div className="project-actions">
+                      <button 
+                        className="icon-btn"
+                        onClick={() => handleStartDuplicate(project)}
+                        title="Duplicate"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M3 11V3C3 2.44772 3.44772 2 4 2H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </button>
                       <button 
                         className="icon-btn"
                         onClick={() => handleEdit(project)}

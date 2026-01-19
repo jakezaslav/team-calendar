@@ -12,12 +12,20 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedDateForTask, setSelectedDateForTask] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
-  const { undo, canUndo, selectedTask, selectedTaskId, deleteTask, activeProject } = useTasks()
+  const { undo, canUndo, selectedTask, selectedTaskId, deleteTask, activeProject, navigateToDate, clearNavigateToDate } = useTasks()
 
   // Update document title when project changes
   useEffect(() => {
     document.title = `${activeProject?.name || 'My Project'} - Plan It!`
   }, [activeProject])
+
+  // Handle navigation requests (e.g., after duplicating a project)
+  useEffect(() => {
+    if (navigateToDate) {
+      setCurrentDate(navigateToDate)
+      clearNavigateToDate()
+    }
+  }, [navigateToDate, clearNavigateToDate])
 
   // Keyboard shortcuts
   useEffect(() => {
