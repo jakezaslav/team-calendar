@@ -162,7 +162,7 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
       const cellWidth = contentWidth / 7
       const headerHeight = 8
       const dateRowHeight = 6
-      const taskRowHeight = 5
+      const taskRowHeight = 5.6
       
       // Calculate task rows per week
       const weekTaskRows = weeks.map(week => {
@@ -170,9 +170,9 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
         return assignTaskRows(weekTasks, week)
       })
       
-      // Calculate cell heights based on task count
+      // Calculate cell heights based on task count (minimum 3 rows to fit 3 events)
       const cellHeights = weekTaskRows.map(rows => {
-        const numRows = Math.max(1, rows.length)
+        const numRows = Math.max(3, rows.length)
         return dateRowHeight + (numRows * taskRowHeight) + 3
       })
       
@@ -244,7 +244,7 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
             const brightness = getColorBrightness(task.color)
             pdf.setTextColor(brightness > 128 ? 45 : 255, brightness > 128 ? 42 : 255, brightness > 128 ? 38 : 255)
             pdf.setFont('helvetica', 'bold')
-            pdf.setFontSize(6)
+            pdf.setFontSize(9)
             
             // Truncate text if needed
             const maxWidth = taskWidth - 2
@@ -253,7 +253,7 @@ export async function exportToPdf(tasks, projectName = 'Calendar') {
               displayName = displayName.slice(0, -4) + '...'
             }
             
-            pdf.text(displayName, taskX + 1.5, taskY + 3.2)
+            pdf.text(displayName, taskX + 1.5, taskY + 3.5)
           }
         }
         
