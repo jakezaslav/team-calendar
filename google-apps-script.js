@@ -22,22 +22,55 @@ function doPost(e) {
     console.log('Received sync request:', projectName);
     console.log('Tasks count:', tasks ? tasks.length : 0);
     
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    sheet.clear();
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
     // Find all months that have tasks
     const monthsWithTasks = getMonthsWithTasks(tasks);
     
-    // Build all calendars sequentially
+    // Clean up old monthly tabs (delete sheets that match month pattern)
+    cleanupMonthlyTabs(spreadsheet, monthNames);
+    
+    // === BUILD MAIN TAB ===
+    let mainSheet = spreadsheet.getSheetByName('Main');
+    if (!mainSheet) {
+      // Rename the first sheet to "Main" if it exists, otherwise create it
+      mainSheet = spreadsheet.getSheets()[0];
+      if (mainSheet) {
+        mainSheet.setName('Main');
+      } else {
+        mainSheet = spreadsheet.insertSheet('Main');
+      }
+    }
+    spreadsheet.setActiveSheet(mainSheet);
+    mainSheet.clear();
+    
+    // Build all calendars sequentially on Main tab
     let currentRow = 1;
     for (const monthInfo of monthsWithTasks) {
-      currentRow = buildCalendarWithTasks(sheet, tasks, monthInfo.month, monthInfo.year, projectName, currentRow);
+      currentRow = buildCalendarWithTasks(mainSheet, tasks, monthInfo.month, monthInfo.year, projectName, currentRow);
       currentRow += 2; // Add spacing between months
     }
     
-    // Build task list and assignee due dates to the right
-    buildTaskList(sheet, tasks);
-    buildAssigneeDueDates(sheet, tasks);
+    // Build task list and assignee due dates to the right on Main tab
+    buildTaskList(mainSheet, tasks);
+    buildAssigneeDueDates(mainSheet, tasks);
+    
+    // === BUILD MONTHLY TABS ===
+    for (const monthInfo of monthsWithTasks) {
+      const tabName = monthNames[monthInfo.month] + ' ' + monthInfo.year;
+      const monthSheet = spreadsheet.insertSheet(tabName);
+      
+      // Build calendar for this month
+      buildCalendarWithTasks(monthSheet, tasks, monthInfo.month, monthInfo.year, projectName, 1);
+      
+      // Build assignee due dates filtered to tasks due this month
+      const tasksDueThisMonth = getTasksDueInMonth(tasks, monthInfo.month, monthInfo.year);
+      buildMonthlyAssigneeDueDates(monthSheet, tasksDueThisMonth, monthInfo.month, monthInfo.year);
+    }
+    
+    // Set Main as the active sheet when done
+    spreadsheet.setActiveSheet(mainSheet);
     
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, tasksProcessed: tasks.length }))
@@ -48,6 +81,22 @@ function doPost(e) {
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Clean up old monthly tabs before re-creating them
+function cleanupMonthlyTabs(spreadsheet, monthNames) {
+  const sheets = spreadsheet.getSheets();
+  const monthPattern = new RegExp('^(' + monthNames.join('|') + ') \\d{4}$');
+  
+  for (const sheet of sheets) {
+    const name = sheet.getName();
+    if (monthPattern.test(name)) {
+      // Don't delete if it's the only sheet
+      if (spreadsheet.getSheets().length > 1) {
+        spreadsheet.deleteSheet(sheet);
+      }
+    }
   }
 }
 
@@ -230,7 +279,7 @@ function buildCalendarWithTasks(sheet, tasks, month, year, projectName, startRow
   return lastRow;
 }
 
-// Get tasks for a specific month
+// Get tasks for a specific month (tasks that overlap with the month)
 function getTasksForMonth(tasks, month, year) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0);
@@ -239,6 +288,14 @@ function getTasksForMonth(tasks, month, year) {
     const taskStart = new Date(task.startDate + 'T00:00:00');
     const taskEnd = new Date(task.endDate + 'T00:00:00');
     return taskStart <= monthEnd && taskEnd >= monthStart;
+  });
+}
+
+// Get tasks that are DUE (end date) in a specific month
+function getTasksDueInMonth(tasks, month, year) {
+  return tasks.filter(task => {
+    const endDate = new Date(task.endDate + 'T00:00:00');
+    return endDate.getMonth() === month && endDate.getFullYear() === year;
   });
 }
 
@@ -386,7 +443,7 @@ function buildTaskList(sheet, tasks) {
   sheet.setColumnWidth(startCol + 4, 100);
 }
 
-// Build due dates grouped by assignee (columns O-P)
+// Build due dates grouped by assignee (columns O-P) for Main tab
 function buildAssigneeDueDates(sheet, tasks) {
   const startCol = 15; // Column O
   
@@ -452,6 +509,89 @@ function buildAssigneeDueDates(sheet, tasks) {
   
   // Set column widths
   sheet.setColumnWidth(14, 30); // Spacer
+  sheet.setColumnWidth(startCol, 180);
+  sheet.setColumnWidth(startCol + 1, 80);
+}
+
+// Build due dates grouped by assignee for monthly tabs (columns I-J)
+// Only shows tasks that are DUE in this specific month
+function buildMonthlyAssigneeDueDates(sheet, tasksDueThisMonth, month, year) {
+  const startCol = 9; // Column I (right after calendar)
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  // Title
+  sheet.getRange(1, startCol, 1, 2).merge();
+  sheet.getRange(1, startCol).setValue('DUE IN ' + monthNames[month].toUpperCase() + ' ' + year);
+  sheet.getRange(1, startCol).setFontSize(14).setFontWeight('bold').setBackground('#faf8f5');
+  
+  if (tasksDueThisMonth.length === 0) {
+    sheet.getRange(2, startCol).setValue('No tasks due this month');
+    sheet.getRange(2, startCol).setFontStyle('italic');
+    sheet.setColumnWidth(8, 30); // Spacer
+    sheet.setColumnWidth(startCol, 180);
+    return;
+  }
+  
+  // Group tasks by assignee
+  const tasksByAssignee = {};
+  for (const task of tasksDueThisMonth) {
+    const assignee = task.assignee || 'Unassigned';
+    if (!tasksByAssignee[assignee]) {
+      tasksByAssignee[assignee] = [];
+    }
+    tasksByAssignee[assignee].push(task);
+  }
+  
+  // Sort assignees alphabetically
+  const assignees = Object.keys(tasksByAssignee).sort();
+  
+  let currentRow = 2;
+  
+  for (const assignee of assignees) {
+    // Assignee header
+    sheet.getRange(currentRow, startCol, 1, 2).merge();
+    sheet.getRange(currentRow, startCol).setValue(assignee);
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol).setBackground('#f5f2ed');
+    currentRow++;
+    
+    // Column headers
+    sheet.getRange(currentRow, startCol).setValue('Task');
+    sheet.getRange(currentRow, startCol + 1).setValue('Due Date');
+    sheet.getRange(currentRow, startCol).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol + 1).setFontWeight('bold');
+    sheet.getRange(currentRow, startCol, 1, 2).setBackground('#faf8f5');
+    currentRow++;
+    
+    // Sort tasks by end date (due date)
+    const assigneeTasks = tasksByAssignee[assignee].sort((a, b) => 
+      a.endDate.localeCompare(b.endDate)
+    );
+    
+    for (const task of assigneeTasks) {
+      // Task name with color
+      sheet.getRange(currentRow, startCol).setValue(task.name);
+      sheet.getRange(currentRow, startCol).setBackground(task.color);
+      const brightness = getColorBrightness(task.color);
+      sheet.getRange(currentRow, startCol).setFontColor(brightness > 128 ? '#2d2a26' : '#ffffff');
+      
+      // Due date
+      sheet.getRange(currentRow, startCol + 1).setValue(formatDate(task.endDate));
+      
+      currentRow++;
+    }
+    
+    currentRow++; // Add spacing between assignees
+  }
+  
+  // Add borders
+  if (currentRow > 3) {
+    sheet.getRange(2, startCol, currentRow - 2, 2).setBorder(true, true, true, true, true, true, '#e8e4de', SpreadsheetApp.BorderStyle.SOLID);
+  }
+  
+  // Set column widths
+  sheet.setColumnWidth(8, 30); // Spacer
   sheet.setColumnWidth(startCol, 180);
   sheet.setColumnWidth(startCol + 1, 80);
 }
