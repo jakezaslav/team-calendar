@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { exportToPdf } from '../utils/exportPdf'
+import { downloadTasksAsExcel } from '../utils/exportExcel'
 import { useTasks } from '../context/TaskContext'
 import './ExportButton.css'
 
@@ -39,6 +40,11 @@ function ExportButton() {
     setIsExporting(false)
   }
 
+  const handleDownloadExcel = () => {
+    setIsOpen(false)
+    downloadTasksAsExcel(allTasks, activeProject?.name || 'Calendar')
+  }
+
   return (
     <div className="export-button-wrapper" ref={dropdownRef}>
       <button 
@@ -60,12 +66,21 @@ function ExportButton() {
 
       {isOpen && (
         <div className="export-dropdown">
+          <button className="export-option" onClick={handleDownloadExcel}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M2 5H14" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M5 8H11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M5 10H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Download as Excel
+          </button>
           <button className="export-option" onClick={handleExportAll}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M4 1H10L14 5V14C14 14.5523 13.5523 15 13 15H4C3.44772 15 3 14.5523 3 14V2C3 1.44772 3.44772 1 4 1Z" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M10 1V5H14" stroke="currentColor" strokeWidth="1.5"/>
             </svg>
-            Export All Tasks
+            Export All Tasks (PDF)
           </button>
           
           {assignees.length > 0 && (
