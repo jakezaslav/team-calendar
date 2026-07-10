@@ -1,6 +1,6 @@
-import { createContext, useContext, useCallback, useMemo, useState } from 'react'
+import { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
-import { generateId, parseISO, differenceInDays, addDays, format } from '../utils/dateUtils'
+import { generateId, parseISO, differenceInDays, addDays, format, getFirstFullWeekStartOfMonth } from '../utils/dateUtils'
 
 const TaskContext = createContext(null)
 
@@ -21,100 +21,119 @@ const DEMO_PROJECT = {
   color: '#81a684'
 }
 
-const INITIAL_PROJECTS = [DEFAULT_PROJECT, DEMO_PROJECT]
+const INITIAL_PROJECTS = [DEMO_PROJECT, DEFAULT_PROJECT]
 
-// Helper to get dates relative to current month
-const getMonthDate = (day) => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}-${String(day).padStart(2, '0')}`
-}
+// Build demo tasks anchored to the first full week of the current month
+const buildDemoTasks = () => {
+  const weekStart = getFirstFullWeekStartOfMonth()
+  const date = (offset) => format(addDays(weekStart, offset), 'yyyy-MM-dd')
 
-// Demo tasks showcasing all capabilities
-const INITIAL_TASKS = {
-  'proj-default': [],
-  'proj-demo': [
+  return [
     {
       id: 'demo-1',
       name: 'Project Kickoff Meeting',
       assignee: 'Team',
-      startDate: getMonthDate(2),
-      endDate: getMonthDate(2),
+      startDate: date(0),
+      endDate: date(0),
       color: '#81a684',
     },
     {
       id: 'demo-2',
       name: 'Research & Discovery Phase',
       assignee: 'Alex Kim',
-      startDate: getMonthDate(4),
-      endDate: getMonthDate(7),
+      startDate: date(2),
+      endDate: date(5),
       color: '#7d9bb8',
     },
     {
       id: 'demo-3',
       name: 'Design Wireframes',
       assignee: 'Jordan Lee',
-      startDate: getMonthDate(6),
-      endDate: getMonthDate(10),
+      startDate: date(4),
+      endDate: date(8),
       color: '#c9b8d4',
     },
     {
       id: 'demo-4',
       name: 'Stakeholder Review',
       assignee: 'Team',
-      startDate: getMonthDate(11),
-      endDate: getMonthDate(11),
+      startDate: date(9),
+      endDate: date(9),
       color: '#f4d19b',
     },
     {
       id: 'demo-5',
       name: 'Development Sprint 1',
       assignee: 'Dev Team',
-      startDate: getMonthDate(13),
-      endDate: getMonthDate(19),
+      startDate: date(11),
+      endDate: date(17),
       color: '#e07a5f',
     },
     {
       id: 'demo-6',
       name: 'Write Documentation',
       assignee: 'Sam Chen',
-      startDate: getMonthDate(15),
-      endDate: getMonthDate(17),
+      startDate: date(13),
+      endDate: date(15),
       color: '#d4a574',
     },
     {
       id: 'demo-7',
       name: 'QA Testing',
       assignee: 'Morgan Blake',
-      startDate: getMonthDate(20),
-      endDate: getMonthDate(23),
+      startDate: date(18),
+      endDate: date(21),
       color: '#f7e96c',
     },
     {
       id: 'demo-8',
       name: 'Development Sprint 2',
       assignee: 'Dev Team',
-      startDate: getMonthDate(20),
-      endDate: getMonthDate(26),
+      startDate: date(18),
+      endDate: date(24),
       color: '#e07a5f',
     },
     {
       id: 'demo-9',
       name: 'Final Review & Launch Prep',
       assignee: 'Team',
-      startDate: getMonthDate(27),
-      endDate: getMonthDate(28),
+      startDate: date(25),
+      endDate: date(26),
       color: '#81a684',
     },
   ]
 }
 
+const DEMO_TASK_IDS = new Set([
+  'demo-1', 'demo-2', 'demo-3', 'demo-4', 'demo-5',
+  'demo-6', 'demo-7', 'demo-8', 'demo-9',
+])
+
+const isStockDemoTasks = (tasks) =>
+  tasks?.length === 9 && tasks.every((t) => DEMO_TASK_IDS.has(t.id))
+
+const INITIAL_TASKS = {
+  'proj-default': [],
+  'proj-demo': buildDemoTasks(),
+}
+
 export function TaskProvider({ children }) {
   const [projects, setProjects] = useLocalStorage('team-calendar-projects', INITIAL_PROJECTS)
   const [tasksByProject, setTasksByProject] = useLocalStorage('team-calendar-tasks-v2', INITIAL_TASKS)
-  const [activeProjectId, setActiveProjectId] = useLocalStorage('team-calendar-active-project', DEFAULT_PROJECT.id)
+  const [activeProjectId, setActiveProjectId] = useLocalStorage('team-calendar-active-project-v2', DEMO_PROJECT.id)
   const [selectedTaskId, setSelectedTaskId] = useLocalStorage('team-calendar-selected', null)
+
+  // Keep stock demo tasks aligned to the first full week of the current month
+  useEffect(() => {
+    const demoTasks = tasksByProject['proj-demo']
+    if (!isStockDemoTasks(demoTasks)) return
+
+    const fresh = buildDemoTasks()
+    const needsUpdate = demoTasks.some((t, i) => t.startDate !== fresh[i].startDate)
+    if (needsUpdate) {
+      setTasksByProject((prev) => ({ ...prev, 'proj-demo': fresh }))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   
   // Undo history - stored in memory only (not persisted)
   const [undoHistory, setUndoHistory] = useState([])

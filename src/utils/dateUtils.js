@@ -38,6 +38,19 @@ export {
 }
 
 /**
+ * Get the Sunday that starts the first full week of the month
+ * (all 7 days Sun–Sat fall within the month)
+ */
+export function getFirstFullWeekStartOfMonth(date = new Date()) {
+  const monthStart = startOfMonth(date)
+  let weekStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+  if (weekStart < monthStart) {
+    weekStart = addDays(weekStart, 7)
+  }
+  return weekStart
+}
+
+/**
  * Get all days to display in a calendar month view
  * Includes days from previous/next months to fill complete weeks
  */
